@@ -1,0 +1,656 @@
+import { useState } from "react";
+import axios from "axios";
+import { useAuth } from "../context/AuthContext";
+import ImageCrop from "./ImageCrop";
+import { useNavigate } from "react-router-dom";
+
+export default function LoanApplicationFlow() {
+  const center = JSON.parse(localStorage.getItem("center"));
+  const member = JSON.parse(localStorage.getItem("member"));
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const [currentStep, setCurrentStep] = useState(1);
+  const [showCrop, setShowCrop] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedField, setSelectedField] = useState("");
+  const [showPopup, setShowPopup] = useState(false);
+  const [popupLoading, setPopupLoading] = useState(false);
+  const [popupSuccess, setPopupSuccess] = useState(false);
+  const [errors, setErrors] = useState({});
+
+ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+  const initialForm = {
+    memberCibil: member?.memberCibil || "",
+    personName: member?.name || "",
+    dateofbirth: member?.dateofbirth || "",
+    gender: member?.gender || "",
+    religion: "",
+    maritalStatus: "",
+    aadharNo: "",
+    memberwork: "",
+    annualIncome: "",
+    nomineeName: "",
+    nomineeDob: "",
+    nomineeGender: "",
+    nomineeReligion: "",
+    nomineeMaritalStatus: "",
+    nomineeRelationship: "",
+    nomineeBusiness: "",
+    mobileNo: "",
+    nomineeMobile: "",
+    memberEmail: "",
+    address: "",
+    pincode: "",
+    memberAadhaarFront: null,
+    memberAadhaarBack: null,
+    nomineeAadhaarFront: null,
+    nomineeAadhaarBack: null,
+    panCard: null,
+    formImage: null,
+    signature: null,
+    memberPhoto: null,
+    passbookImage: null,
+  };
+
+  const [loanForm, setLoanForm] = useState(initialForm);
+
+  if (!center || !member) {
+    return (
+      <p className="text-red-500 text-center mt-10">
+        Please select a center and member first.
+      </p>
+    );
+  }
+
+  // ---------------- Validation ----------------
+  const validateStep1 = () => {
+    const e = {};
+    if (!loanForm.memberCibil || loanForm.memberCibil.length !== 3) e.memberCibil = "CIBIL required (3 digits)";
+    if (!loanForm.personName) e.personName = "Name required";
+    if (!loanForm.dateofbirth) e.dateofbirth = "DOB required";
+    if (!loanForm.gender) e.gender = "Gender required";
+    if (!loanForm.religion) e.religion = "Religion required";
+    if (!loanForm.maritalStatus) e.maritalStatus = "Marital status required";
+    if (!loanForm.aadharNo || loanForm.aadharNo.length !== 12) e.aadharNo = "Valid Aadhaar required";
+    if (!loanForm.memberwork) e.memberwork = "Work required";
+    if (!loanForm.annualIncome) e.annualIncome = "Income required";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const validateStep2 = () => {
+    const e = {};
+    if (!loanForm.nomineeName) e.nomineeName = "Nominee name required";
+    if (!loanForm.nomineeDob) e.nomineeDob = "Nominee DOB required";
+    if (!loanForm.nomineeGender) e.nomineeGender = "Nominee gender required";
+    if (!loanForm.nomineeReligion) e.nomineeReligion = "Nominee religion required";
+    if (!loanForm.nomineeMaritalStatus) e.nomineeMaritalStatus = "Nominee marital status required";
+    if (!loanForm.nomineeRelationship) e.nomineeRelationship = "Nominee relationship required";
+    if (!loanForm.nomineeBusiness) e.nomineeBusiness = "Nominee business required";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const validateStep3 = () => {
+    const e = {};
+    if (loanForm.mobileNo.length !== 10) e.mobileNo = "Valid mobile required";
+    if (loanForm.nomineeMobile.length !== 10) e.nomineeMobile = "Valid nominee mobile required";
+    else if (loanForm.nomineeMobile === loanForm.mobileNo) e.nomineeMobile = "Nominee mobile cannot be same as member mobile";
+    if (!loanForm.address) e.address = "Address required";
+    if (loanForm.pincode.length !== 6) e.pincode = "Valid pincode required";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const validateStep4 = () => {
+    const requiredFiles = [
+      "memberAadhaarFront", "memberAadhaarBack",
+      "nomineeAadhaarFront", "nomineeAadhaarBack",
+      "panCard", "formImage", "signature",
+      "memberPhoto", "passbookImage"
+    ];
+    const e = {};
+    requiredFiles.forEach(f => {
+      if (!loanForm[f]) e[f] = "Required";
+    });
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  // ---------------- Handlers ----------------
+  const handleChange = (e) => {
+    const { name, value, type } = e.target;
+    setLoanForm(prev => ({
+      ...prev,
+      [name]: type === "text" ? value.charAt(0).toUpperCase() + value.slice(1) : value
+    }));
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setSelectedFile(file);
+    setSelectedField(e.target.name);
+    setShowCrop(true);
+  };
+
+  const handleCroppedImage = (blob) => {
+    if (!blob) return;
+    const croppedFile = new File([blob], "cropped.jpg", { type: "image/jpeg" });
+    setLoanForm(prev => ({ ...prev, [selectedField]: croppedFile }));
+    setShowCrop(false);
+    setSelectedFile(null);
+    setSelectedField("");
+  };
+
+  const nextStep = () => {
+    let valid = false;
+    if (currentStep === 1) valid = validateStep1();
+    if (currentStep === 2) valid = validateStep2();
+    if (currentStep === 3) valid = validateStep3();
+    if (!valid) return;
+    setCurrentStep(s => s + 1);
+  };
+
+  const prevStep = () => setCurrentStep(s => Math.max(s - 1, 1));
+
+  const handleSubmit = async () => {
+    if (!validateStep4()) return;
+    if (!user) return alert("Login required");
+
+    setShowPopup(true);
+    setPopupLoading(true);
+    setPopupSuccess(false);
+
+    try {
+      const FD = new FormData();
+      Object.entries(loanForm).forEach(([key, value]) => value && FD.append(key, value));
+      FD.append("userId", user.id);
+      FD.append("centerId", center.id);
+      FD.append("memberId", member.id);
+
+      const res = await axios.post(`${API_URL}/api/loans`, FD, { headers: { "Content-Type": "multipart/form-data" } });
+
+      setPopupLoading(false);
+      setPopupSuccess(true);
+
+      setTimeout(() => {
+        setShowPopup(false);
+        setPopupSuccess(false);
+        setLoanForm(initialForm);
+        setCurrentStep(1);
+        navigate("/members", { replace: true });
+        alert(`Loan Submitted ✔ ID: ${res.data.loanId}`);
+      }, 1500);
+    } catch (err) {
+      console.error(err);
+      setPopupLoading(false);
+      setShowPopup(false);
+      alert("Loan submit failed");
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-100 flex justify-center p-6">
+      <div className="w-full max-w-3xl bg-white rounded-xl shadow-lg p-6">
+        <h2 className="text-2xl font-bold text-center text-indigo-600 mb-4">
+          Loan Application
+        </h2>
+
+        <p className="text-center mb-6">
+          <b>Center:</b> {center.name} | <b>Member:</b> {member.name}
+        </p>
+
+        {/* STEP 1: Member Info */}
+        {currentStep === 1 && (
+          <div className="space-y-4">
+
+            {/* Member CIBIL */}
+            <div>
+              <input
+                type="text"
+                placeholder="Member CIBIL (3 digits)"
+                value={loanForm.memberCibil}
+                onChange={(e) =>
+                  /^\d{0,3}$/.test(e.target.value) &&
+                  setLoanForm(p => ({ ...p, memberCibil: e.target.value }))
+                }
+                className={`w-full p-3 border rounded-lg 
+          ${errors.memberCibil ? "border-red-500" : "border-gray-300"}`}
+              />
+              {errors.memberCibil && (
+                <p className="text-red-500 text-sm">{errors.memberCibil}</p>
+              )}
+            </div>
+
+            {/* Full Name */}
+            <div>
+              <input
+                type="text"
+                name="personName"
+                placeholder="Full Name"
+                value={loanForm.personName}
+                onChange={handleChange}
+                className={`w-full p-3 border rounded-lg 
+          ${errors.personName ? "border-red-500" : "border-gray-300"}`}
+              />
+              {errors.personName && (
+                <p className="text-red-500 text-sm">{errors.personName}</p>
+              )}
+            </div>
+
+            {/* Date of Birth */}
+            <div>
+              <input
+                type="date"
+                name="dateofbirth"
+                value={loanForm.dateofbirth}
+                onChange={handleChange}
+                className={`w-full p-3 border rounded-lg 
+          ${errors.dateofbirth ? "border-red-500" : "border-gray-300"}`}
+              />
+              {errors.dateofbirth && (
+                <p className="text-red-500 text-sm">{errors.dateofbirth}</p>
+              )}
+            </div>
+
+            {/* Gender */}
+            <div>
+              <select
+                name="gender"
+                value={loanForm.gender}
+                onChange={handleChange}
+                className={`w-full p-3 border rounded-lg 
+          ${errors.gender ? "border-red-500" : "border-gray-300"}`}
+              >
+                <option value="">Select Gender</option>
+                <option value="Female">Female</option>
+                
+              </select>
+              {errors.gender && (
+                <p className="text-red-500 text-sm">{errors.gender}</p>
+              )}
+            </div>
+
+            {/* Religion */}
+            <div>
+              <select
+                name="religion"
+                value={loanForm.religion}
+                onChange={handleChange}
+                className={`w-full p-3 border rounded-lg 
+          ${errors.religion ? "border-red-500" : "border-gray-300"}`}
+              >
+                <option value="">Select Religion</option>
+                <option value="Hindu">Hindu</option>
+                <option value="Muslim">Muslim</option>
+                <option value="Christian">Christian</option>
+                <option value="Other">Other</option>
+              </select>
+              {errors.religion && (
+                <p className="text-red-500 text-sm">{errors.religion}</p>
+              )}
+            </div>
+
+            {/* Marital Status */}
+            <div>
+              <select
+                name="maritalStatus"
+                value={loanForm.maritalStatus}
+                onChange={handleChange}
+                className={`w-full p-3 border rounded-lg 
+          ${errors.maritalStatus ? "border-red-500" : "border-gray-300"}`}
+              >
+                <option value="">Select Marital Status</option>
+                <option value="Married">Married</option>
+                <option value="Divorced">Divorced</option>
+                <option value="Widowed">Widowed</option>
+              </select>
+              {errors.maritalStatus && (
+                <p className="text-red-500 text-sm">{errors.maritalStatus}</p>
+              )}
+            </div>
+
+            {/* Aadhaar */}
+            <div>
+              <input
+                type="text"
+                placeholder="Aadhaar XXXX XXXX XXXX"
+                value={
+                  loanForm.aadharNo
+                    ? loanForm.aadharNo.replace(/(\d{4})(?=\d)/g, "$1 ")
+                    : ""
+                }
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/\s/g, "");
+                  if (/^\d{0,12}$/.test(raw)) {
+                    setLoanForm(p => ({ ...p, aadharNo: raw }));
+                  }
+                }}
+                className={`w-full p-3 border rounded-lg 
+          ${errors.aadharNo ? "border-red-500" : "border-gray-300"}`}
+              />
+              {errors.aadharNo && (
+                <p className="text-red-500 text-sm">{errors.aadharNo}</p>
+              )}
+            </div>
+
+            {/* Work */}
+            <div>
+              <input
+                type="text"
+                name="memberwork"
+                placeholder="Work / Business"
+                value={loanForm.memberwork}
+                onChange={handleChange}
+                className={`w-full p-3 border rounded-lg 
+          ${errors.memberwork ? "border-red-500" : "border-gray-300"}`}
+              />
+              {errors.memberwork && (
+                <p className="text-red-500 text-sm">{errors.memberwork}</p>
+              )}
+            </div>
+
+            {/* Annual Income */}
+            <div>
+              <input
+                type="number"
+                name="annualIncome"
+                placeholder="Annual Income"
+                value={loanForm.annualIncome}
+                onChange={(e) =>
+                  setLoanForm(p => ({ ...p, annualIncome: e.target.value }))
+                }
+                className={`w-full p-3 border rounded-lg 
+          ${errors.annualIncome ? "border-red-500" : "border-gray-300"}`}
+              />
+              {errors.annualIncome && (
+                <p className="text-red-500 text-sm">{errors.annualIncome}</p>
+              )}
+            </div>
+
+          </div>
+        )}
+
+
+        {/* STEP 2: Nominee Info */}
+
+        {currentStep === 2 && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Nominee Information</h3>
+
+            {/* Nominee Name */}
+            <div>
+              <input
+                type="text"
+                name="nomineeName"
+                placeholder="Nominee Name"
+                value={loanForm.nomineeName}
+                onChange={handleChange}
+                className={`w-full p-3 border rounded-lg ${errors.nomineeName ? "border-red-500" : "border-gray-300"
+                  }`}
+              />
+              {errors.nomineeName && (
+                <p className="text-red-500 text-sm">{errors.nomineeName}</p>
+              )}
+            </div>
+
+            {/* Nominee DOB */}
+            <div>
+              <input
+                type="date"
+                name="nomineeDob"
+                value={loanForm.nomineeDob}
+                onChange={handleChange}
+                className={`w-full p-3 border rounded-lg ${errors.nomineeDob ? "border-red-500" : "border-gray-300"
+                  }`}
+              />
+              {errors.nomineeDob && (
+                <p className="text-red-500 text-sm">{errors.nomineeDob}</p>
+              )}
+            </div>
+
+            {/* Nominee Gender */}
+            <select
+              name="nomineeGender"
+              value={loanForm.nomineeGender}
+              onChange={handleChange}
+              className={`w-full p-3 border rounded-lg ${errors.nomineeGender ? "border-red-500" : "border-gray-300"
+                }`}
+            >
+              <option value="">Select Gender</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+            </select>
+            {errors.nomineeGender && (
+              <p className="text-red-500 text-sm">{errors.nomineeGender}</p>
+            )}
+
+            {/* Nominee Religion */}
+            <select
+              name="nomineeReligion"
+              value={loanForm.nomineeReligion}
+              onChange={handleChange}
+              className={`w-full p-3 border rounded-lg ${errors.nomineeReligion ? "border-red-500" : "border-gray-300"
+                }`}
+            >
+              <option value="">Select Religion</option>
+              <option value="Hindu">Hindu</option>
+              <option value="Muslim">Muslim</option>
+              <option value="Christian">Christian</option>
+              <option value="Other">Other</option>
+            </select>
+            {errors.nomineeReligion && (
+              <p className="text-red-500 text-sm">{errors.nomineeReligion}</p>
+            )}
+
+            {/* Nominee Marital Status */}
+            <select
+              name="nomineeMaritalStatus"
+              value={loanForm.nomineeMaritalStatus}
+              onChange={handleChange}
+              className={`w-full p-3 border rounded-lg ${errors.nomineeMaritalStatus ? "border-red-500" : "border-gray-300"
+                }`}
+            >
+              <option value="">Select Marital Status</option>
+              <option value="Single">Single</option>
+              <option value="Married">Married</option>
+              <option value="Divorced">Divorced</option>
+              <option value="Widowed">Widowed</option>
+            </select>
+            {errors.nomineeMaritalStatus && (
+              <p className="text-red-500 text-sm">{errors.nomineeMaritalStatus}</p>
+            )}
+
+            {/* Nominee Relationship */}
+            <select
+              name="nomineeRelationship"
+              value={loanForm.nomineeRelationship}
+              onChange={handleChange}
+              className={`w-full p-3 border rounded-lg ${errors.nomineeRelationship ? "border-red-500" : "border-gray-300"
+                }`}
+            >
+              <option value="">Select Relationship</option>
+              <option value="Spouse">Spouse</option>
+              <option value="Son">Son</option>
+              <option value="Daughter">Daughter</option>
+            
+            </select>
+            {errors.nomineeRelationship && (
+              <p className="text-red-500 text-sm">{errors.nomineeRelationship}</p>
+            )}
+
+            {/* Nominee Business */}
+            <input
+              type="text"
+              name="nomineeBusiness"
+              placeholder="Nominee Business / Work"
+              value={loanForm.nomineeBusiness}
+              onChange={handleChange}
+              className={`w-full p-3 border rounded-lg ${errors.nomineeBusiness ? "border-red-500" : "border-gray-300"
+                }`}
+            />
+            {errors.nomineeBusiness && (
+              <p className="text-red-500 text-sm">{errors.nomineeBusiness}</p>
+            )}
+          </div>
+        )}
+
+
+        {/* STEP 3: Contact Info */}
+        {currentStep === 3 && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Contact Information</h3>
+
+            {["mobileNo", "nomineeMobile", "memberEmail", "address", "pincode"].map(
+              (field) => (
+                <div key={field}>
+                  <input
+                    type={field.includes("Email") ? "email" : "text"}
+                    name={field}
+                    placeholder={field
+                      .replace(/([A-Z])/g, " $1")
+                      .replace(/^./, (str) => str.toUpperCase())}
+                    value={loanForm[field]}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (field === "mobileNo" || field === "nomineeMobile") {
+                        if (/^\d{0,10}$/.test(val))
+                          setLoanForm((prev) => ({ ...prev, [field]: val }));
+                      } else if (field === "pincode") {
+                        if (/^\d{0,6}$/.test(val))
+                          setLoanForm((prev) => ({ ...prev, [field]: val }));
+                      } else {
+                        setLoanForm((prev) => ({ ...prev, [field]: val }));
+                      }
+                    }}
+                    className={`w-full p-3 border rounded-lg ${errors[field] ? "border-red-500" : "border-gray-300"
+                      }`}
+                  />
+                  {errors[field] && field !== "memberEmail" && (
+                    <p className="text-red-500 text-sm">{errors[field]}</p>
+                  )}
+                </div>
+              )
+            )}
+          </div>
+        )}
+
+
+
+        {/* STEP 4: Upload Files */}
+        {currentStep === 4 && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Upload Documents</h3>
+
+            {[
+              ["memberAadhaarFront", "Member Aadhaar Front"],
+              ["memberAadhaarBack", "Member Aadhaar Back"],
+              ["nomineeAadhaarFront", "Nominee Aadhaar Front"],
+              ["nomineeAadhaarBack", "Nominee Aadhaar Back"],
+              ["panCard", "PAN Card"],
+              ["formImage", "Form Image"],
+              ["signature", "Signature"],
+              ["passbookImage", "Passbook Image"],
+              ["memberPhoto", "Member Photo"],
+            ].map(([field, label]) => (
+              <div key={field} className="flex items-center gap-3">
+                <label className="w-full">
+                  <span className="block mb-1 font-medium">{label}</span>
+                  <input
+                    type="file"
+                    name={field}
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className={`w-full p-2 border rounded-lg ${errors[field] ? "border-red-500" : "border-gray-300"
+                      }`}
+                  />
+                  {errors[field] && (
+                    <p className="text-red-500 text-sm mt-1">{errors[field]}</p>
+                  )}
+                </label>
+
+                {loanForm[field] && (
+                  <span className="text-green-600 font-bold text-xl">✔</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+
+        {/* CROP MODAL */}
+        {showCrop && selectedFile && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+            <div className="bg-white p-4 rounded-lg w-[90%] max-w-md">
+              <ImageCrop file={selectedFile} onCropComplete={handleCroppedImage} />
+              <button
+                onClick={() => setShowCrop(false)}
+                className="w-full mt-2 bg-gray-400 text-white py-2 rounded"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+        {showPopup && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 w-80 text-center animate-scaleIn">
+
+              {/* Loading */}
+              {popupLoading && (
+                <>
+                  <div className="mx-auto w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+                  <p className="text-lg font-semibold">Submitting Loan...</p>
+                </>
+              )}
+
+              {/* Success */}
+              {popupSuccess && (
+                <>
+                  <div className="mx-auto w-14 h-14 flex items-center justify-center rounded-full bg-green-600 text-white text-3xl mb-4 animate-bounce">
+                    ✓
+                  </div>
+                  <p className="text-lg font-semibold text-green-600">
+                    Loan Submitted Successfully
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+
+        {/* Navigation Buttons */}
+        <div className="flex justify-between mt-6">
+          {currentStep > 1 ? (
+            <button onClick={prevStep} className="bg-gray-300 px-4 py-2 rounded">
+              Previous
+            </button>
+          ) : (
+            <div />
+          )}
+          {currentStep < 4 ? (
+            <button
+              onClick={nextStep}
+              className="bg-indigo-600 text-white px-4 py-2 rounded"
+            >
+              Next
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              className="bg-green-600 text-white px-4 py-2 rounded"
+            >
+              Submit Loan
+            </button>
+
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
