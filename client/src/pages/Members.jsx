@@ -125,7 +125,7 @@ export default function Members() {
           className="absolute top-4 left-4 bg-gray-300 px-3 py-1 rounded"
         >
           Back
-        </button>
+        </button><br /><br />
 
         <h2 className="text-2xl font-bold mb-6 text-center">
           Members – {center.name}
