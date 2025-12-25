@@ -65,8 +65,8 @@ export default function Centers() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center p-6">
-      <div className="w-full max-w-2xl bg-white shadow-lg rounded-lg p-6">
+    <div className="min-h-screen bg-gray-100 flex flex-col items-center p-4">
+      <div className="w-full max-w-2xl bg-white shadow-lg rounded-lg p-4">
         <h2 className="text-2xl font-bold mb-4 text-center">Centers</h2>
 
         {error && (

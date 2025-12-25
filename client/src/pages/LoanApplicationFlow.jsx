@@ -242,19 +242,27 @@ export default function LoanApplicationFlow() {
             </div>
 
             {/* Date of Birth */}
-            <div>
+            <div className="relative">
+              {!loanForm.dateofbirth && (
+                <span className="absolute left-3 top-3 text-gray-400 pointer-events-none">
+                  Date of Birth
+                </span>
+              )}
+
               <input
                 type="date"
                 name="dateofbirth"
                 value={loanForm.dateofbirth}
                 onChange={handleChange}
-                className={`w-full p-3 border rounded-lg 
-          ${errors.dateofbirth ? "border-red-500" : "border-gray-300"}`}
+                className={`w-full p-3 border rounded-lg bg-transparent 
+      ${errors.dateofbirth ? "border-red-500" : "border-gray-300"}`}
               />
+
               {errors.dateofbirth && (
                 <p className="text-red-500 text-sm">{errors.dateofbirth}</p>
               )}
             </div>
+
 
             {/* Gender */}
             <div>
@@ -398,15 +406,22 @@ export default function LoanApplicationFlow() {
             </div>
 
             {/* Nominee DOB */}
-            <div>
+            <div className="relative">
+              {!loanForm.nomineeDob && (
+                <span className="absolute left-3 top-3 text-gray-400 pointer-events-none">
+                  Nominee Date of Birth
+                </span>
+              )}
+
               <input
                 type="date"
                 name="nomineeDob"
                 value={loanForm.nomineeDob}
                 onChange={handleChange}
-                className={`w-full p-3 border rounded-lg ${errors.nomineeDob ? "border-red-500" : "border-gray-300"
+                className={`w-full p-3 border rounded-lg bg-transparent ${errors.nomineeDob ? "border-red-500" : "border-gray-300"
                   }`}
               />
+
               {errors.nomineeDob && (
                 <p className="text-red-500 text-sm">{errors.nomineeDob}</p>
               )}
@@ -564,6 +579,7 @@ export default function LoanApplicationFlow() {
                   type="file"
                   name={field}
                   accept="image/*"
+                  capture="environment" // ✅ this makes camera open directly
                   onChange={handleFileChange}
                   className={`w-full p-2 border rounded-lg ${errors[field] ? "border-red-500" : "border-gray-300"
                     }`}
@@ -578,6 +594,7 @@ export default function LoanApplicationFlow() {
                 )}
               </div>
             ))}
+
 
           </div>
         )}
