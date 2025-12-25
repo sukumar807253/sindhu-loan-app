@@ -19,7 +19,7 @@ export default function LoanApplicationFlow() {
   const [popupSuccess, setPopupSuccess] = useState(false);
   const [errors, setErrors] = useState({});
 
- const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
   const initialForm = {
     memberCibil: member?.memberCibil || "",
@@ -267,7 +267,7 @@ export default function LoanApplicationFlow() {
               >
                 <option value="">Select Gender</option>
                 <option value="Female">Female</option>
-                
+
               </select>
               {errors.gender && (
                 <p className="text-red-500 text-sm">{errors.gender}</p>
@@ -477,7 +477,7 @@ export default function LoanApplicationFlow() {
               <option value="Spouse">Spouse</option>
               <option value="Son">Son</option>
               <option value="Daughter">Daughter</option>
-            
+
             </select>
             {errors.nomineeRelationship && (
               <p className="text-red-500 text-sm">{errors.nomineeRelationship}</p>
@@ -557,27 +557,28 @@ export default function LoanApplicationFlow() {
               ["passbookImage", "Passbook Image"],
               ["memberPhoto", "Member Photo"],
             ].map(([field, label]) => (
-              <div key={field} className="flex items-center gap-3">
-                <label className="w-full">
-                  <span className="block mb-1 font-medium">{label}</span>
-                  <input
-                    type="file"
-                    name={field}
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className={`w-full p-2 border rounded-lg ${errors[field] ? "border-red-500" : "border-gray-300"
-                      }`}
-                  />
-                  {errors[field] && (
-                    <p className="text-red-500 text-sm mt-1">{errors[field]}</p>
-                  )}
-                </label>
+              <div key={field} className="space-y-1">
+                <label className="block font-medium">{label}</label>
+
+                <input
+                  type="file"
+                  name={field}
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className={`w-full p-2 border rounded-lg ${errors[field] ? "border-red-500" : "border-gray-300"
+                    }`}
+                />
 
                 {loanForm[field] && (
-                  <span className="text-green-600 font-bold text-xl">✔</span>
+                  <p className="text-green-600 text-sm font-semibold">Uploaded ✔</p>
+                )}
+
+                {errors[field] && (
+                  <p className="text-red-500 text-sm">{errors[field]}</p>
                 )}
               </div>
             ))}
+
           </div>
         )}
 

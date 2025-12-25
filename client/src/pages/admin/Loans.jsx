@@ -190,17 +190,15 @@ export default function Loans() {
                 {filteredLoans.map((loan, index) => (
                   <tr
                     key={loan.id}
-                    className={`${
-                      index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                    } hover:bg-indigo-50 transition`}
+                    className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                      } hover:bg-indigo-50 transition`}
                   >
                     <td className="px-4 py-2 border font-semibold">
                       {loan.loanid}
                     </td>
                     <td
-                      className={`px-4 py-2 border font-semibold ${
-                        centerColors[loan.centerid]
-                      }`}
+                      className={`px-4 py-2 border font-semibold ${centerColors[loan.centerid]
+                        }`}
                     >
                       {getCenterName(loan.centerid)}
                     </td>
@@ -237,13 +235,12 @@ export default function Loans() {
                         Delete
                       </button>
                       <button
-                        onClick={() =>
-                          navigate(`/admin/loans/${loan.id}`)
-                        }
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1 rounded-lg"
+                        onClick={() => navigate(`/admin/loans/${loan.id}`)}
+                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-1 rounded-lg"
                       >
                         Open
                       </button>
+
                     </td>
                   </tr>
                 ))}

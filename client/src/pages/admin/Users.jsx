@@ -16,10 +16,10 @@ export default function AdminUsers() {
     try {
       const res = await axios.get(`${API_URL}/api/users`);
       setUsers(res.data || []);
-      setLoading(false);
     } catch (err) {
       console.error(err);
       setError("Failed to load users");
+    } finally {
       setLoading(false);
     }
   };
@@ -30,8 +30,12 @@ export default function AdminUsers() {
       const counts = {};
       await Promise.all(
         users.map(async (user) => {
-          const res = await axios.get(`${API_URL}/api/users/${user.id}/loans`);
-          counts[user.id] = res.data.filter(loan => loan.status === "PENDING").length;
+          const res = await axios.get(
+            `${API_URL}/api/users/${user.id}/loans`
+          );
+          counts[user.id] = res.data.filter(
+            (loan) => loan.status === "PENDING"
+          ).length;
         })
       );
       setLoanCounts(counts);
@@ -47,7 +51,7 @@ export default function AdminUsers() {
   useEffect(() => {
     if (users.length > 0) {
       fetchLoanCounts();
-      const interval = setInterval(fetchLoanCounts, 10000); // refresh every 10s
+      const interval = setInterval(fetchLoanCounts, 10000);
       return () => clearInterval(interval);
     }
   }, [users]);
@@ -58,12 +62,7 @@ export default function AdminUsers() {
 
     try {
       await axios.delete(`${API_URL}/api/users/${userId}`);
-      setUsers(prev => prev.filter(u => u.id !== userId));
-      setLoanCounts(prev => {
-        const copy = { ...prev };
-        delete copy[userId];
-        return copy;
-      });
+      setUsers((prev) => prev.filter((u) => u.id !== userId));
       alert("User deleted successfully!");
     } catch (err) {
       console.error(err);
@@ -71,81 +70,108 @@ export default function AdminUsers() {
     }
   };
 
-  /* ================= BLOCK/UNBLOCK USER ================= */
-  const handleBlock = async (userId, currentlyBlocked) => {
+  /* ================= BLOCK / UNBLOCK ================= */
+  const handleBlock = async (userId, blocked) => {
     try {
-      await axios.patch(`${API_URL}/api/users/${userId}`, { blocked: !currentlyBlocked });
-      setUsers(prev =>
-        prev.map(u => u.id === userId ? { ...u, blocked: !currentlyBlocked } : u)
+      await axios.patch(`${API_URL}/api/users/${userId}`, {
+        blocked: !blocked,
+      });
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === userId ? { ...u, blocked: !blocked } : u
+        )
       );
     } catch (err) {
       console.error(err);
-      alert("Failed to update block status");
+      alert("Failed to update status");
     }
   };
 
-  if (loading) return <p className="text-center mt-10">Loading users...</p>;
-  if (error) return <p className="text-center mt-10 text-red-600">{error}</p>;
+  if (loading)
+    return <p className="text-center mt-10 text-gray-500">Loading users...</p>;
+
+  if (error)
+    return (
+      <p className="text-center mt-10 text-red-600 font-semibold">{error}</p>
+    );
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6 text-center text-indigo-600">Admin – Users</h2>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-6">
+      {/* Header */}
+      <div className="max-w-5xl mx-auto mb-8">
+        <h2 className="text-3xl font-extrabold text-center bg-gradient-to-r from-indigo-600 to-purple-600 text-transparent bg-clip-text">
+          Sindhuja.fin – Admin Users
+        </h2>
+        <p className="text-center text-gray-500 mt-2">
+          Manage users, loans & access control
+        </p>
+      </div>
 
-      {users.length === 0 ? (
-        <p className="text-center text-gray-500">No users found.</p>
-      ) : (
-        users.map((user) => (
-          <div
-            key={user.id}
-            className="flex justify-between items-center p-4 mb-3 border rounded-lg hover:shadow-lg transition"
-          >
-            <div>
-              <p className="font-semibold">
-                {user.name} {user.blocked && <span className="text-red-600">(Blocked)</span>}
-              </p>
-              <p className="text-sm text-gray-500">User ID: {user.id}</p>
-            </div>
+      {/* Users */}
+      <div className="max-w-5xl mx-auto space-y-4">
+        {users.length === 0 ? (
+          <p className="text-center text-gray-500">No users found.</p>
+        ) : (
+          users.map((user) => (
+            <div
+              key={user.id}
+              className="bg-white rounded-xl shadow-md border border-gray-100 p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4 hover:shadow-lg transition"
+            >
+              {/* User Info */}
+              <div>
+                <p className="text-lg font-semibold text-gray-800">
+                  {user.name}
+                </p>
+                <p className="text-sm text-gray-500">ID: {user.id}</p>
 
-            <div className="flex items-center gap-3">
-              {loanCounts[user.id] > 0 && (
-                <span className="bg-blue-200 text-blue-800 px-3 py-1 rounded-full font-semibold text-sm">
-                  {loanCounts[user.id]} Pending Loan{loanCounts[user.id] > 1 ? "s" : ""}
+                <span
+                  className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold ${user.blocked
+                      ? "bg-red-100 text-red-700"
+                      : "bg-green-100 text-green-700"
+                    }`}
+                >
+                  {user.blocked ? "Blocked" : "Active"}
                 </span>
-              )}
+              </div>
 
-              <button
-                onClick={() => handleBlock(user.id, user.blocked)}
-                className={`px-4 py-2 rounded-lg font-medium transition ${
-                  user.blocked
-                    ? "bg-gray-600 text-white hover:bg-gray-700"
-                    : "bg-black text-white hover:bg-gray-800"
-                }`}
-              >
-                {user.blocked ? "Unblock" : "Block"}
-              </button>
+              {/* Actions */}
+              <div className="flex flex-wrap items-center gap-3">
+                {loanCounts[user.id] > 0 && (
+                  <span className="bg-yellow-100 text-yellow-800 px-4 py-1 rounded-full font-semibold text-sm">
+                    {loanCounts[user.id]} Pending Loan
+                    {loanCounts[user.id] > 1 && "s"}
+                  </span>
+                )}
+               
 
-              <button
-                onClick={() => navigate(`/admin/users/${user.id}/loans`)}
-                className={`px-4 py-2 rounded-lg text-white transition ${
-                  user.blocked
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-indigo-600 hover:bg-indigo-700"
-                }`}
-                disabled={user.blocked}
-              >
-                View Loans
-              </button>
+                <button
+                  onClick={() => handleBlock(user.id, user.blocked)}
+                  className={`px-4 py-2 rounded-lg text-white font-medium transition ${user.blocked
+                      ? "bg-gray-600 hover:bg-gray-700"
+                      : "bg-indigo-600 hover:bg-indigo-700"
+                    }`}
+                >
+                  {user.blocked ? "Unblock" : "Block"}
+                </button>
 
-              <button
-                onClick={() => handleDelete(user.id)}
-                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
-              >
-                Delete
-              </button>
+                <button
+                  onClick={() => navigate(`/admin/users/${user.id}/loans`)}
+                  disabled={user.blocked}
+                  className={`px-4 py-2 rounded-lg text-white font-medium transition ${user.blocked
+                      ? "bg-gray-300 cursor-not-allowed"
+                      : "bg-green-600 hover:bg-green-700"
+                    }`}
+                >
+                  View Loans
+                </button>
+
+
+
+              </div>
             </div>
-          </div>
-        ))
-      )}
+          ))
+        )}
+      </div>
     </div>
   );
 }

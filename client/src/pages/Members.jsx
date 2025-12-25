@@ -7,24 +7,22 @@ export default function Members() {
 
   const [members, setMembers] = useState([]);
   const [name, setName] = useState("");
+  const [nameError, setNameError] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // ✅ Vite env variable
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-  /* ================= REDIRECT IF CENTER MISSING ================= */
+  /* ================= REDIRECT ================= */
   useEffect(() => {
-    if (!center?.id) {
-      navigate("/centers");
-    }
+    if (!center?.id) navigate("/centers");
   }, [center, navigate]);
 
-  /* ================= FETCH MEMBERS & LOANS ================= */
+  /* ================= FETCH MEMBERS ================= */
   useEffect(() => {
     if (!center?.id) return;
 
-    const fetchMembersAndLoans = async () => {
+    const fetchData = async () => {
       try {
         const membersRes = await fetch(`${API_URL}/api/members/${center.id}`);
         const loansRes = await fetch(`${API_URL}/api/loans`);
@@ -32,26 +30,23 @@ export default function Members() {
         const membersData = await membersRes.json();
         const loansData = await loansRes.json();
 
-        const submittedMemberIds = new Set(
-          loansData.map((l) => Number(l.memberid))
+        const submittedIds = new Set(loansData.map(l => Number(l.memberid)));
+
+        setMembers(
+          membersData.map(m => ({
+            ...m,
+            id: Number(m.id),
+            loanSubmitted: submittedIds.has(Number(m.id)),
+          }))
         );
-
-        const updatedMembers = membersData.map((m) => ({
-          ...m,
-          id: Number(m.id),
-          loanSubmitted: submittedMemberIds.has(Number(m.id)),
-        }));
-
-        setMembers(updatedMembers);
-      } catch (err) {
-        console.error(err);
+      } catch {
         setError("Failed to load members");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchMembersAndLoans();
+    fetchData();
   }, [center, API_URL]);
 
   /* ================= CAPITALIZE ================= */
@@ -59,12 +54,30 @@ export default function Members() {
     str
       .trim()
       .split(" ")
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
       .join(" ");
+
+  /* ================= INPUT CHANGE ================= */
+  const handleNameChange = (e) => {
+    const value = e.target.value;
+    setName(value);
+
+    const formatted = capitalizeName(value);
+
+    const exists = members.some(
+      m => capitalizeName(m.name) === formatted
+    );
+
+    if (exists) {
+      setNameError("Member name already exists");
+    } else {
+      setNameError("");
+    }
+  };
 
   /* ================= ADD MEMBER ================= */
   const addMember = async () => {
-    if (!name.trim() || !center?.id) return;
+    if (!name.trim() || nameError) return;
 
     const formattedName = capitalizeName(name);
 
@@ -79,46 +92,37 @@ export default function Members() {
       });
 
       const data = await res.json();
+      if (!res.ok) return;
 
-      if (!res.ok) {
-        alert(data.error || "Failed to add member");
-        return;
-      }
-
-      setMembers((prev) => [
+      setMembers(prev => [
         ...prev,
         { ...data, id: Number(data.id), loanSubmitted: false },
       ]);
 
       setName("");
-    } catch (err) {
-      console.error(err);
-      alert("Server error");
+      setNameError("");
+    } catch {
+      console.error("Server error");
     }
   };
 
-  /* ================= SELECT MEMBER ================= */
+  /* ================= SELECT ================= */
   const selectMember = (member) => {
     localStorage.setItem("member", JSON.stringify(member));
     navigate("/loan-application");
   };
 
   /* ================= UI ================= */
-  if (loading) {
-    return <p className="text-center mt-10 text-gray-600">Loading members...</p>;
-  }
-
-  if (error) {
-    return <p className="text-center mt-10 text-red-500">{error}</p>;
-  }
+  if (loading) return <p className="text-center mt-10">Loading members...</p>;
+  if (error) return <p className="text-center mt-10 text-red-500">{error}</p>;
 
   return (
-    <div className="min-h-screen bg-gray-100 flex justify-center p-6">
-      <div className="w-full max-w-2xl bg-white shadow-lg rounded-lg p-6 relative">
-        {/* Back Button */}
+    <div className="min-h-screen bg-gray-100 flex justify-center p-4">
+      <div className="w-full max-w-2xl bg-white shadow rounded-lg p-4 relative">
+
         <button
           onClick={() => navigate("/centers")}
-          className="absolute top-4 left-4 bg-gray-300 text-gray-800 px-3 py-1 rounded shadow hover:bg-gray-400"
+          className="absolute top-4 left-4 bg-gray-300 px-3 py-1 rounded"
         >
           Back
         </button>
@@ -128,54 +132,60 @@ export default function Members() {
         </h2>
 
         {/* ADD MEMBER */}
-        <div className="flex mb-6">
-          <input
-            placeholder="New Member Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="flex-1 p-3 border rounded-l-lg"
-          />
-          <button
-            onClick={addMember}
-            className="bg-indigo-600 text-white px-4 rounded-r-lg"
-          >
-            Add
-          </button>
+        <div className="mb-2">
+          <div className="flex">
+            <input
+              value={name}
+              onChange={handleNameChange}
+              placeholder="New Member Name"
+              className={`flex-1 p-3 border rounded-l-lg ${
+                nameError ? "border-red-500" : ""
+              }`}
+            />
+            <button
+              onClick={addMember}
+              disabled={!name.trim() || !!nameError}
+              className={`px-4 rounded-r-lg text-white ${
+                nameError
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-indigo-600 hover:bg-indigo-700"
+              }`}
+            >
+              Add
+            </button>
+          </div>
+
+          {nameError && (
+            <p className="text-red-500 text-sm mt-1">{nameError}</p>
+          )}
         </div>
 
         {/* MEMBERS LIST */}
-        {members.length === 0 ? (
-          <p className="text-center text-gray-600">No members found</p>
-        ) : (
-          <ul className="space-y-3">
-            {members.map((member) => (
-              <li
-                key={member.id}
-                className="flex justify-between items-center p-3 border rounded"
-              >
-                <span
-                  className={`font-medium ${
-                    member.loanSubmitted ? "text-green-600" : "text-gray-800"
-                  }`}
-                >
-                  {capitalizeName(member.name)}
-                </span>
+        <ul className="space-y-3 mt-6">
+          {members.map(member => (
+            <li
+              key={member.id}
+              className="flex justify-between items-center p-3 border rounded"
+            >
+              <span className={member.loanSubmitted ? "text-green-600" : ""}>
+                {capitalizeName(member.name)}
+              </span>
 
-                <button
-                  disabled={member.loanSubmitted}
-                  onClick={() => selectMember(member)}
-                  className={`px-3 py-1 rounded text-white ${
-                    member.loanSubmitted
-                      ? "bg-gray-400"
-                      : "bg-green-500 hover:bg-green-600"
-                  }`}
-                >
-                  Loan
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+              <button
+                disabled={member.loanSubmitted}
+                onClick={() => selectMember(member)}
+                className={`px-3 py-1 rounded text-white ${
+                  member.loanSubmitted
+                    ? "bg-gray-400"
+                    : "bg-green-500 hover:bg-green-600"
+                }`}
+              >
+                Loan
+              </button>
+            </li>
+          ))}
+        </ul>
+
       </div>
     </div>
   );
