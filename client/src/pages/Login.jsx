@@ -43,12 +43,8 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-indigo-200 via-purple-200 to-pink-200">
       <div className="bg-white p-10 rounded-xl shadow-xl w-full max-w-md">
         <h2 className="text-3xl font-bold text-center text-indigo-500">
-          Welcome Back <span className="text-pink-400">Sindhuja.Fin</span>
+          Welcome Back <span className="text-green-400">Sindhuja.Fin</span>
         </h2>
-
-        <p className="text-center text-gray-600 mb-6">
-          Secure Microfinance Loan Management System
-        </p>
 
         <h2 className="text-3xl font-bold text-center mb-6 text-indigo-700">
           Login
@@ -62,7 +58,7 @@ export default function Login() {
             onChange={(e) => setEmail(e.target.value)}
             required
             disabled={loading}
-            className="w-full px-4 py-2 rounded-md border-2 border-pink-400 focus:outline-none focus:ring-2 focus:ring-pink-400"
+            className="w-full px-4 py-2 rounded-md border-2 border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
           />
 
           <input
@@ -72,7 +68,7 @@ export default function Login() {
             onChange={(e) => setPassword(e.target.value)}
             required
             disabled={loading}
-            className="w-full px-4 py-2 rounded-md border-2 border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+            className="w-full px-4 py-2 rounded-md border-2 border-green-400 focus:outline-none focus:ring-2 focus:ring-green-400"
           />
 
           <button

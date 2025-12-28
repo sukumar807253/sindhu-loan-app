@@ -75,7 +75,7 @@ export default function Signup() {
             placeholder="Email"
             required
             disabled={loading}
-            className="w-full px-4 py-2 rounded-md border-2 border-pink-400"
+            className="w-full px-4 py-2 rounded-md border-2 border-yellow-400"
           />
 
           <input
@@ -84,7 +84,7 @@ export default function Signup() {
             placeholder="Password"
             required
             disabled={loading}
-            className="w-full px-4 py-2 rounded-md border-2 border-yellow-400"
+            className="w-full px-4 py-2 rounded-md border-2 border-green-400"
           />
 
           <button

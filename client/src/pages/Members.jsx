@@ -18,7 +18,7 @@ export default function Members() {
     if (!center?.id) navigate("/centers");
   }, [center, navigate]);
 
-  /* ================= FETCH MEMBERS ================= */
+  /* ================= FETCH MEMBERS + LOANS ================= */
   useEffect(() => {
     if (!center?.id) return;
 
@@ -30,14 +30,18 @@ export default function Members() {
         const membersData = await membersRes.json();
         const loansData = await loansRes.json();
 
-        const submittedIds = new Set(loansData.map(l => Number(l.memberid)));
-
         setMembers(
-          membersData.map(m => ({
-            ...m,
-            id: Number(m.id),
-            loanSubmitted: submittedIds.has(Number(m.id)),
-          }))
+          membersData.map((m) => {
+            const loan = loansData.find(
+              (l) => Number(l.memberid) === Number(m.id)
+            );
+
+            return {
+              ...m,
+              id: Number(m.id),
+              loanStatus: loan ? loan.status : null, // PENDING / APPROVED / REJECTED / null
+            };
+          })
         );
       } catch {
         setError("Failed to load members");
@@ -54,7 +58,7 @@ export default function Members() {
     str
       .trim()
       .split(" ")
-      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
       .join(" ");
 
   /* ================= INPUT CHANGE ================= */
@@ -65,23 +69,19 @@ export default function Members() {
     const formatted = capitalizeName(value);
 
     const exists = members.some(
-      m => capitalizeName(m.name) === formatted
+      (m) => capitalizeName(m.name) === formatted
     );
 
-    if (exists) {
-      setNameError("Member name already exists");
-    } else {
-      setNameError("");
-    }
+    setNameError(exists ? "Member name already exists" : "");
   };
 
   /* ================= ADD MEMBER ================= */
   const addMember = async () => {
     if (!name.trim() || nameError) return;
 
-    const formattedName = capitalizeName(name);
-
     try {
+      const formattedName = capitalizeName(name);
+
       const res = await fetch(`${API_URL}/api/members`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -94,22 +94,25 @@ export default function Members() {
       const data = await res.json();
       if (!res.ok) return;
 
-      setMembers(prev => [
+      setMembers((prev) => [
         ...prev,
-        { ...data, id: Number(data.id), loanSubmitted: false },
+        { ...data, id: Number(data.id), loanStatus: null },
       ]);
 
       setName("");
       setNameError("");
     } catch {
-      console.error("Server error");
+      alert("Server error");
     }
   };
 
-  /* ================= SELECT ================= */
-  const selectMember = (member) => {
+  /* ================= SELECT MEMBER ================= */
+  const handleAction = (member) => {
     localStorage.setItem("member", JSON.stringify(member));
-    navigate("/loan-application");
+
+    if (!member.loanStatus) {
+      navigate("/loan-application");
+    }
   };
 
   /* ================= UI ================= */
@@ -125,31 +128,31 @@ export default function Members() {
           className="absolute top-4 left-4 bg-gray-300 px-3 py-1 rounded"
         >
           Back
-        </button><br /><br />
+        </button>
+
+        <br /><br />
 
         <h2 className="text-2xl font-bold mb-6 text-center">
           Members – {center.name}
         </h2>
 
         {/* ADD MEMBER */}
-        <div className="mb-2">
+        <div className="mb-3">
           <div className="flex">
             <input
               value={name}
               onChange={handleNameChange}
               placeholder="New Member Name"
-              className={`flex-1 p-3 border rounded-l-lg ${
-                nameError ? "border-red-500" : ""
-              }`}
+              className={`flex-1 p-3 border rounded-l-lg ${nameError ? "border-red-500" : ""
+                }`}
             />
             <button
               onClick={addMember}
               disabled={!name.trim() || !!nameError}
-              className={`px-4 rounded-r-lg text-white ${
-                nameError
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-indigo-600 hover:bg-indigo-700"
-              }`}
+              className={`px-4 rounded-r-lg text-white ${nameError
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-indigo-600 hover:bg-indigo-700"
+                }`}
             >
               Add
             </button>
@@ -162,26 +165,32 @@ export default function Members() {
 
         {/* MEMBERS LIST */}
         <ul className="space-y-3 mt-6">
-          {members.map(member => (
+          {members.map((member) => (
             <li
               key={member.id}
               className="flex justify-between items-center p-3 border rounded"
             >
-              <span className={member.loanSubmitted ? "text-green-600" : ""}>
+              <span className="font-medium">
                 {capitalizeName(member.name)}
               </span>
 
+
               <button
-                disabled={member.loanSubmitted}
-                onClick={() => selectMember(member)}
-                className={`px-3 py-1 rounded text-white ${
-                  member.loanSubmitted
-                    ? "bg-gray-400"
-                    : "bg-green-500 hover:bg-green-600"
-                }`}
+                disabled={!!member.loanStatus}
+                onClick={() => handleAction(member)}
+                className={`px-3 py-1 rounded text-white ${!member.loanStatus
+                    ? "bg-blue-600 hover:bg-blue-700"
+                    : member.loanStatus === "PENDING"
+                      ? "bg-yellow-500 cursor-not-allowed"
+                      : member.loanStatus === "APPROVED"
+                        ? "bg-green-700 cursor-not-allowed"
+                        : "bg-red-600 cursor-not-allowed"
+                  }`}
               >
-                Loan
+                {!member.loanStatus ? "Apply Loan" : member.loanStatus}
               </button>
+
+
             </li>
           ))}
         </ul>

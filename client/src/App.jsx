@@ -16,7 +16,7 @@ import AdminCenters from "./pages/admin/Centers";
 import AdminMembers from "./pages/admin/Members";
 import AdminLoans from "./pages/admin/Loans";
 import AdminLoanDetails from "./pages/admin/LoanDetails";
-import Loans from "./pages/admin/Loans";
+
 
 export default function App() {
   return (
