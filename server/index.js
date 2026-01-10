@@ -348,6 +348,45 @@ app.get("/api/loans/:id", async (req, res) => {
   }
 });
 
+/* ==================== CREDIT LOAN ==================== */
+app.post("/api/loans/credit/:id", async (req, res) => {
+  const loanId = req.params.id;
+
+  try {
+    // 1️⃣ Fetch loan from Supabase
+    const { data: loan, error: fetchError } = await supabase
+      .from("loans")
+      .select("*")
+      .eq("id", loanId)
+      .single();
+
+    if (fetchError || !loan) {
+      return res.status(404).json({ error: "Loan not found" });
+    }
+
+    // 2️⃣ Only allow credit if loan is APPROVED
+    if (loan.status !== "APPROVED") {
+      return res
+        .status(400)
+        .json({ error: "Loan must be APPROVED before crediting" });
+    }
+
+    // 3️⃣ Update status to CREDITED
+    const { error: updateError } = await supabase
+      .from("loans")
+      .update({ status: "CREDITED" })
+      .eq("id", loanId);
+
+    if (updateError) throw updateError;
+
+    res.json({ message: "Loan credited successfully" });
+  } catch (err) {
+    console.error("CREDIT LOAN ERROR:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+
 
 
 
