@@ -5,13 +5,15 @@ export default function Centers() {
   const [centers, setCenters] = useState([]);
   const [name, setName] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false); // ✅ loading state
   const navigate = useNavigate();
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"; // ✅ Vite env
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
   const capitalize = (str = "") =>
     str.charAt(0).toUpperCase() + str.slice(1);
 
+  // Fetch centers
   useEffect(() => {
     fetch(`${API_URL}/api/centers`)
       .then(res => res.json())
@@ -19,10 +21,11 @@ export default function Centers() {
       .catch(() => setError("Failed to load centers"));
   }, [API_URL]);
 
+  // Add Center
   const addCenter = async () => {
     if (!name.trim()) return;
-
     const formattedName = capitalize(name.trim());
+
     const exists = centers.some(
       c => c.name.toLowerCase() === formattedName.toLowerCase()
     );
@@ -32,15 +35,17 @@ export default function Centers() {
       return;
     }
 
+    setLoading(true);
     try {
       const res = await fetch(`${API_URL}/api/centers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: formattedName })
+        body: JSON.stringify({ name: formattedName }),
       });
 
       if (res.status === 409) {
         setError("Center name already exists");
+        setLoading(false);
         return;
       }
 
@@ -50,9 +55,12 @@ export default function Centers() {
       setError("");
     } catch {
       setError("Something went wrong");
+    } finally {
+      setLoading(false);
     }
   };
 
+  // Select center
   const selectCenter = (center) => {
     localStorage.setItem(
       "center",
@@ -87,9 +95,19 @@ export default function Centers() {
           />
           <button
             onClick={addCenter}
-            className="bg-indigo-600 text-white px-4 rounded-r-lg"
+            disabled={loading} // ✅ disable while loading
+            className={`px-4 rounded-r-lg text-white flex items-center justify-center gap-2
+              ${loading ? "bg-indigo-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}
+            `}
           >
-            Add
+            {loading ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                Adding...
+              </>
+            ) : (
+              "Add"
+            )}
           </button>
         </div>
 
@@ -103,7 +121,7 @@ export default function Centers() {
 
               <button
                 onClick={() => selectCenter(c)}
-                className="bg-green-500 text-white px-3 py-1 rounded"
+                className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
               >
                 Open
               </button>

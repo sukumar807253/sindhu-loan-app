@@ -88,8 +88,11 @@ export default function Loans() {
     return center ? center.name : "N/A";
   };
 
+  /* ================= STATUS COLOR ================= */
   const statusColor = (status) => {
     switch (status?.toLowerCase()) {
+      case "credited":
+        return "bg-purple-600 text-white ring-2 ring-purple-300";
       case "approved":
         return "bg-green-300 text-green-900";
       case "rejected":
@@ -158,7 +161,7 @@ export default function Loans() {
           </button>
         </div>
 
-        {/* SEARCH BAR */}
+        {/* SEARCH */}
         <div className="mb-4 flex justify-end">
           <input
             type="text"
@@ -190,15 +193,17 @@ export default function Loans() {
                 {filteredLoans.map((loan, index) => (
                   <tr
                     key={loan.id}
-                    className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                      } hover:bg-indigo-50 transition`}
+                    className={`${
+                      index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                    } hover:bg-indigo-50 transition`}
                   >
                     <td className="px-4 py-2 border font-semibold">
                       {loan.loanid}
                     </td>
                     <td
-                      className={`px-4 py-2 border font-semibold ${centerColors[loan.centerid]
-                        }`}
+                      className={`px-4 py-2 border font-semibold ${
+                        centerColors[loan.centerid]
+                      }`}
                     >
                       {getCenterName(loan.centerid)}
                     </td>
@@ -211,7 +216,7 @@ export default function Loans() {
                           loan.status
                         )}`}
                       >
-                        {loan.status || "Pending"}
+                        {loan.status}
                       </span>
                     </td>
                     <td className="px-4 py-2 border text-sm text-gray-600">
@@ -220,27 +225,28 @@ export default function Loans() {
                       ).toLocaleString()}
                     </td>
                     <td className="px-4 py-2 border text-center space-x-2">
-                      <button
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              "Are you sure you want to delete this loan?"
-                            )
-                          ) {
-                            deleteLoanMutation.mutate(loan.id);
-                          }
-                        }}
-                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-1 rounded-lg"
-                      >
-                        Delete
-                      </button>
+                      {loan.status !== "CREDITED" && (
+                        <button
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                "Are you sure you want to delete this loan?"
+                              )
+                            ) {
+                              deleteLoanMutation.mutate(loan.id);
+                            }
+                          }}
+                          className="bg-red-600 hover:bg-red-700 text-white px-4 py-1 rounded-lg"
+                        >
+                          Delete
+                        </button>
+                      )}
                       <button
                         onClick={() => navigate(`/admin/loans/${loan.id}`)}
                         className="bg-green-600 hover:bg-green-700 text-white px-4 py-1 rounded-lg"
                       >
                         Open
                       </button>
-
                     </td>
                   </tr>
                 ))}

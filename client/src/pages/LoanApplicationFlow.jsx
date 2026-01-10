@@ -602,34 +602,17 @@ export default function LoanApplicationFlow() {
 
         {/* CROP MODAL */}
         {showCrop && selectedFile && (
-          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg w-full max-w-md h-full max-h-[90vh] flex flex-col overflow-hidden">
-
-              {/* Crop Component */}
-              <div className="flex-1 relative">
-                <ImageCrop file={selectedFile} onCropComplete={handleCroppedImage} />
-              </div>
-
-              {/* Buttons */}
-              <div className="flex gap-2 p-4">
-                <button
-                  onClick={() => setShowCrop(false)}
-                  className="flex-1 bg-gray-400 text-white py-3 rounded-lg text-center font-medium"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  onClick={() => handleCroppedImage(selectedFile)}
-                  className="flex-1 bg-green-600 text-white py-3 rounded-lg text-center font-medium"
-                >
-                  Crop & Save
-                </button>
-              </div>
-
-            </div>
-          </div>
+          <ImageCrop
+            file={selectedFile}
+            onCropComplete={handleCroppedImage}
+            onCancel={() => {
+              setShowCrop(false);
+              setSelectedFile(null);
+              setSelectedField("");
+            }}
+          />
         )}
+
 
         {showPopup && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">

@@ -10,24 +10,27 @@ export default function AdminLoanDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [updating, setUpdating] = useState(false);
+  const [credited, setCredited] = useState(false); // track if loan has been credited
 
- const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
   const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
   const SUPABASE_BUCKET = import.meta.env.VITE_SUPABASE_BUCKET;
 
   // ================= FETCH LOAN =================
+  const fetchLoan = async () => {
+    try {
+      setLoading(true);
+      const res = await axios.get(`${API_URL}/api/loans/${loanId}`);
+      setLoan(res.data);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load loan details");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchLoan = async () => {
-      try {
-        const res = await axios.get(`${API_URL}/api/loans/${loanId}`);
-        setLoan(res.data);
-      } catch (err) {
-        console.error(err);
-        setError("Failed to load loan details");
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchLoan();
   }, [loanId]);
 
@@ -37,10 +40,27 @@ export default function AdminLoanDetails() {
       setUpdating(true);
       await axios.patch(`${API_URL}/api/loans/${loanId}`, { status });
       alert(`Loan ${status}`);
-      navigate(-1);
+      await fetchLoan(); // refresh loan data after status update
     } catch (err) {
       console.error(err);
       alert("Failed to update loan status");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // ================= CREDIT LOAN =================
+  const creditLoan = async () => {
+    if (!loan) return;
+    try {
+      setUpdating(true);
+      await axios.post(`${API_URL}/api/loans/credit/${loanId}`);
+      alert("Loan credited successfully!");
+      setCredited(true); // mark as credited
+      await fetchLoan(); // refresh loan details if needed
+    } catch (err) {
+      console.error(err);
+      alert("Failed to credit loan");
     } finally {
       setUpdating(false);
     }
@@ -70,8 +90,8 @@ export default function AdminLoanDetails() {
     loan?.status === "APPROVED"
       ? "bg-green-100 text-green-700 border-green-300"
       : loan?.status === "REJECTED"
-      ? "bg-red-100 text-red-700 border-red-300"
-      : "bg-yellow-100 text-yellow-700 border-yellow-300";
+        ? "bg-red-100 text-red-700 border-red-300"
+        : "bg-yellow-100 text-yellow-700 border-yellow-300";
 
   if (loading)
     return <p className="p-6 text-center text-gray-600">Loading loan details...</p>;
@@ -168,24 +188,37 @@ export default function AdminLoanDetails() {
       </div>
 
       {/* Actions */}
-      {loan.status === "PENDING" && (
-        <div className="flex gap-4 mt-6">
+      <div className="flex gap-4 mt-6">
+        {loan.status === "PENDING" && (
+          <>
+            <button
+              disabled={updating}
+              onClick={() => updateStatus("APPROVED")}
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded shadow disabled:opacity-50"
+            >
+              {updating ? "Processing..." : "Approve"}
+            </button>
+            <button
+              disabled={updating}
+              onClick={() => updateStatus("REJECTED")}
+              className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded shadow disabled:opacity-50"
+            >
+              {updating ? "Processing..." : "Reject"}
+            </button>
+          </>
+        )}
+
+        {loan.status === "APPROVED" && (
           <button
             disabled={updating}
-            onClick={() => updateStatus("APPROVED")}
-            className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded shadow disabled:opacity-50"
+            onClick={creditLoan}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded shadow disabled:opacity-50"
           >
-            Approve
+            {updating ? "Processing..." : "Credit"}
           </button>
-          <button
-            disabled={updating}
-            onClick={() => updateStatus("REJECTED")}
-            className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded shadow disabled:opacity-50"
-          >
-            Reject
-          </button>
-        </div>
-      )}
+        )}
+
+      </div>
     </div>
   );
 }
