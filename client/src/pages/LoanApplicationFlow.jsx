@@ -18,6 +18,9 @@ export default function LoanApplicationFlow() {
   const [popupLoading, setPopupLoading] = useState(false);
   const [popupSuccess, setPopupSuccess] = useState(false);
   const [errors, setErrors] = useState({});
+  const [popupError, setPopupError] = useState(false);
+
+
 
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -167,9 +170,10 @@ export default function LoanApplicationFlow() {
     try {
       const FD = new FormData();
       Object.entries(loanForm).forEach(([key, value]) => value && FD.append(key, value));
-      FD.append("userId", user.id);
-      FD.append("centerId", center.id);
-      FD.append("memberId", member.id);
+      FD.append("userId", user.id || user._id);
+      FD.append("centerId", center.id || center._id);
+      FD.append("memberId", member.id || member._id);
+
 
       const res = await axios.post(`${API_URL}/api/loans`, FD, { headers: { "Content-Type": "multipart/form-data" } });
 
@@ -183,13 +187,19 @@ export default function LoanApplicationFlow() {
         setCurrentStep(1);
         navigate("/members", { replace: true });
         alert(`Loan Submitted ✔ ID: ${res.data.loanId}`);
-      }, 1500);
+      }, 15000);
     } catch (err) {
-      console.error(err);
+      console.error("Loan submit error:", err?.response?.data || err.message);
+
       setPopupLoading(false);
-      setShowPopup(false);
-      alert("Loan submit failed");
+      setPopupError(true);
+
+      setTimeout(() => {
+        setPopupError(false);
+        setShowPopup(false);
+      }, 2000);
     }
+
   };
 
   return (
@@ -614,32 +624,56 @@ export default function LoanApplicationFlow() {
         )}
 
 
-        {showPopup && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-6 w-80 text-center animate-scaleIn">
+        {popupSuccess && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl p-8 w-80 text-center
+                    animate-[scaleIn_0.4s_ease-out]">
 
-              {/* Loading */}
-              {popupLoading && (
-                <>
-                  <div className="mx-auto w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-                  <p className="text-lg font-semibold">Submitting Loan...</p>
-                </>
-              )}
+              {/* Tick animation */}
+              <div className="mx-auto w-16 h-16 flex items-center justify-center
+                      rounded-full bg-green-500 text-white text-4xl
+                      animate-bounce">
+                ✓
+              </div>
 
-              {/* Success */}
-              {popupSuccess && (
-                <>
-                  <div className="mx-auto w-14 h-14 flex items-center justify-center rounded-full bg-green-600 text-white text-3xl mb-4 animate-bounce">
-                    ✓
-                  </div>
-                  <p className="text-lg font-semibold text-green-600">
-                    Loan Submitted Successfully
-                  </p>
-                </>
-              )}
+              <h2 className="text-xl font-bold text-green-600 mt-4">
+                Loan Submitted!
+              </h2>
+
+              <p className="text-gray-600 text-green-600 mt-2">
+                10000
+              </p>
+
+              <button
+                onClick={() => setPopupSuccess(false)}
+                className="mt-6 w-full bg-indigo-600 text-white py-2 rounded-xl
+                   hover:bg-indigo-700 transition">
+                OK
+              </button>
             </div>
           </div>
         )}
+
+        {showPopup && popupLoading && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 w-64 text-center animate-pulse">
+              <div className="mx-auto w-10 h-10 border-4 border-indigo-600
+                      border-t-transparent rounded-full animate-spin" />
+              <p className="mt-4 font-semibold text-gray-700">
+                Submitting Loan...
+              </p>
+            </div>
+          </div>
+        )}
+
+
+        {popupError && (
+          <div className="fixed bottom-5 right-5 bg-red-600 text-white px-6 py-3
+                  rounded-xl shadow-lg animate-shake z-50">
+            ❌ Loan submit failed
+          </div>
+        )}
+
 
 
         {/* Navigation Buttons */}
@@ -661,10 +695,13 @@ export default function LoanApplicationFlow() {
           ) : (
             <button
               onClick={handleSubmit}
-              className="bg-green-600 text-white px-4 py-2 rounded"
+              disabled={popupLoading}
+              className={`px-4 py-2 rounded text-white
+              ${popupLoading ? "bg-gray-400" : "bg-green-600 hover:bg-green-700"}`}
             >
-              Submit Loan
+              {popupLoading ? "Submitting..." : "Submit Loan"}
             </button>
+
 
           )}
         </div>
