@@ -5,6 +5,8 @@ const bcrypt = require("bcrypt");
 const multer = require("multer");
 const path = require("path");
 const { createClient } = require("@supabase/supabase-js");
+const processImage = require("./utils/imageProcessor");
+
 
 const app = express();
 
@@ -52,21 +54,28 @@ const FILE_FIELDS = [
 ];
 
 const uploadFile = async (file, folder) => {
-  const ext = path.extname(file.originalname);
+  const ext =
+    file.mimetype === "image/png" ? ".png" : ".jpg";
+
   const filePath = `${folder}/${Date.now()}-${Math.random()
     .toString(36)
     .slice(2)}${ext}`;
 
+  // 🔥 PROCESS IMAGE (NO BLUR)
+  const processedBuffer = await processImage(file);
+
   const { error } = await supabase.storage
     .from(SUPABASE_BUCKET)
-    .upload(filePath, file.buffer, {
-      contentType: file.mimetype,
+    .upload(filePath, processedBuffer, {
+      contentType:
+        ext === ".png" ? "image/png" : "image/jpeg",
       upsert: true,
     });
 
   if (error) throw error;
   return filePath;
 };
+
 
 /* ==================== AUTH ==================== */
 app.post("/api/auth/signup", async (req, res) => {
