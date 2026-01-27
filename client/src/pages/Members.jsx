@@ -173,15 +173,17 @@ export default function Members() {
               <button
                 disabled={!!member.loanStatus}
                 onClick={() => handleAction(member)}
-                className={`px-3 py-1 rounded text-white ${
-                  !member.loanStatus
+                className={`px-3 py-1 rounded text-white ${!member.loanStatus
                     ? "bg-blue-600 hover:bg-blue-700"
                     : member.loanStatus === "PENDING"
                       ? "bg-yellow-500 cursor-not-allowed"
                       : member.loanStatus === "APPROVED"
                         ? "bg-green-700 cursor-not-allowed"
-                        : "bg-red-600 cursor-not-allowed"
-                }`}
+                        : member.loanStatus === "CREDITED"
+                          ? "bg-purple-700 cursor-not-allowed"
+                          : "bg-red-600 cursor-not-allowed"
+                  }`}
+
               >
                 {!member.loanStatus ? "Apply Loan" : member.loanStatus}
               </button>
