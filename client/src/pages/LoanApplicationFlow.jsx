@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import ImageCrop from "./ImageCrop";
@@ -19,10 +19,33 @@ export default function LoanApplicationFlow() {
   const [popupSuccess, setPopupSuccess] = useState(false);
   const [errors, setErrors] = useState({});
   const [popupError, setPopupError] = useState(false);
+  const [nomineeAge, setNomineeAge] = useState("");
+const [nomineeAgeValid, setNomineeAgeValid] = useState(null);
+
+
 
 
 
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+  const calculateAge = (dob) => {
+    if (!dob) return "";
+
+    const birthDate = new Date(dob);
+    const today = new Date();
+
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+
+    return age;
+  };
+
+
+
 
   const initialForm = {
     memberCibil: member?.memberCibil || "",
@@ -125,11 +148,28 @@ export default function LoanApplicationFlow() {
   // ---------------- Handlers ----------------
   const handleChange = (e) => {
     const { name, value, type } = e.target;
-    setLoanForm(prev => ({
+
+    // 🔹 Nominee DOB → age calculate & validate
+    if (name === "nomineeDob") {
+      const age = calculateAge(value);
+      setNomineeAge(age);
+
+      if (age < 18) {
+        setNomineeAgeValid(false);
+      } else {
+        setNomineeAgeValid(true);
+      }
+    }
+
+    setLoanForm((prev) => ({
       ...prev,
-      [name]: type === "text" ? value.charAt(0).toUpperCase() + value.slice(1) : value
+      [name]:
+        type === "text" && value
+          ? value.charAt(0).toUpperCase() + value.slice(1)
+          : value,
     }));
   };
+
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -428,14 +468,28 @@ export default function LoanApplicationFlow() {
                 name="nomineeDob"
                 value={loanForm.nomineeDob}
                 onChange={handleChange}
-                className={`w-full p-3 border rounded-lg bg-transparent ${errors.nomineeDob ? "border-red-500" : "border-gray-300"
+                max={new Date().toISOString().split("T")[0]}
+                className={`w-full p-3 border rounded-lg bg-transparent
+                ${nomineeAgeValid === false
+                    ? "border-red-500"
+                    : nomineeAgeValid === true
+                      ? "border-green-500"
+                      : "border-gray-300"
                   }`}
               />
 
-              {errors.nomineeDob && (
-                <p className="text-red-500 text-sm">{errors.nomineeDob}</p>
+              {loanForm.nomineeDob && (
+                <p
+                  className={`mt-1 text-sm ${nomineeAgeValid ? "text-green-600" : "text-red-500"
+                    }`}
+                >
+                  Nominee Age:{" "}
+                  <span className="font-semibold">{nomineeAge}</span> years
+                  {nomineeAgeValid === false && " (Must be 18+)"}
+                </p>
               )}
             </div>
+
 
             {/* Nominee Gender */}
             <select
@@ -646,7 +700,7 @@ export default function LoanApplicationFlow() {
 
 
               <p className="text-gray-600 text-green-600 mt-2">
-               ₹ 10000
+                ₹ 10000
               </p>
 
               <button
