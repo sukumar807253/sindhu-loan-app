@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+
 import {
   useQuery,
   useMutation,
@@ -104,15 +105,23 @@ export default function Loans() {
   };
 
   /* ================= SEARCH FILTER ================= */
-  const filteredLoans = loans.filter((loan) => {
-    const text = search.toLowerCase();
-    return (
+const filteredLoans = useMemo(() => {
+  const text = search.toLowerCase();
+
+  return [...loans]
+    .sort(
+      (a, b) =>
+        new Date(b.created_at || 0) -
+        new Date(a.created_at || 0)
+    ) // 🔥 NEW → OLD (TOP → DOWN)
+    .filter((loan) => (
       loan.loanid?.toLowerCase().includes(text) ||
       loan.personname?.toLowerCase().includes(text) ||
       getCenterName(loan.centerid)?.toLowerCase().includes(text) ||
       loan.status?.toLowerCase().includes(text)
-    );
-  });
+    ));
+}, [loans, search, getCenterName]);
+
 
   /* ================= GUARDS ================= */
   if (!user) {
