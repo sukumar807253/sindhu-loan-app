@@ -180,9 +180,9 @@ export default function AdminLoanDetails() {
             <DocLink label="Passbook" path={loan.passbookimage} />
           </div>
           <div className="space-y-3">
-            <DocLink label="Member Photo" path={loan.memberphoto} />
-            <DocLink label="Signature" path={loan.signature} />
             <DocLink label="Form Image" path={loan.formimage} />
+            <DocLink label="Signature" path={loan.signature} />
+            <DocLink label="Member Photo" path={loan.memberphoto} />
           </div>
         </div>
       </div>
