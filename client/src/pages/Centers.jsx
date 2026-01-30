@@ -5,25 +5,27 @@ export default function Centers() {
   const [centers, setCenters] = useState([]);
   const [name, setName] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false); // ✅ loading state
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  const API_URL =
+    import.meta.env.VITE_API_URL || "http://localhost:5000";
 
   const capitalize = (str = "") =>
     str.charAt(0).toUpperCase() + str.slice(1);
 
-  // Fetch centers
+  /* ================= FETCH CENTERS ================= */
   useEffect(() => {
     fetch(`${API_URL}/api/centers`)
       .then(res => res.json())
-      .then(data => setCenters(data))
+      .then(data => setCenters(Array.isArray(data) ? data : []))
       .catch(() => setError("Failed to load centers"));
   }, [API_URL]);
 
-  // Add Center
+  /* ================= ADD CENTER ================= */
   const addCenter = async () => {
     if (!name.trim()) return;
+
     const formattedName = capitalize(name.trim());
 
     const exists = centers.some(
@@ -43,12 +45,6 @@ export default function Centers() {
         body: JSON.stringify({ name: formattedName }),
       });
 
-      if (res.status === 409) {
-        setError("Center name already exists");
-        setLoading(false);
-        return;
-      }
-
       const data = await res.json();
       setCenters(prev => [...prev, data]);
       setName("");
@@ -60,13 +56,18 @@ export default function Centers() {
     }
   };
 
-  // Select center
+  /* ================= UI DELETE ONLY ================= */
+  const deleteCenter = (id) => {
+    setCenters(prev => prev.filter(c => c.id !== id));
+  };
+
+  /* ================= SELECT CENTER ================= */
   const selectCenter = (center) => {
     localStorage.setItem(
       "center",
       JSON.stringify({
         id: Number(center.id),
-        name: center.name
+        name: center.name,
       })
     );
     navigate("/members");
@@ -75,7 +76,9 @@ export default function Centers() {
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center p-4">
       <div className="w-full max-w-2xl bg-white shadow-lg rounded-lg p-4">
-        <h2 className="text-2xl font-bold mb-4 text-center">Centers</h2>
+        <h2 className="text-2xl font-bold mb-4 text-center">
+          Centers
+        </h2>
 
         {error && (
           <div className="mb-4 p-3 text-center rounded bg-red-100 text-red-700">
@@ -87,7 +90,7 @@ export default function Centers() {
           <input
             placeholder="New Center"
             value={name}
-            onChange={e => {
+            onChange={(e) => {
               setName(e.target.value);
               setError("");
             }}
@@ -95,15 +98,17 @@ export default function Centers() {
           />
           <button
             onClick={addCenter}
-            disabled={loading} // ✅ disable while loading
-            className={`px-4 rounded-r-lg text-white flex items-center justify-center gap-2
-              ${loading ? "bg-indigo-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}
+            disabled={loading}
+            className={`px-4 rounded-r-lg text-white
+              ${
+                loading
+                  ? "bg-indigo-400 cursor-not-allowed"
+                  : "bg-indigo-600 hover:bg-indigo-700"
+              }
             `}
           >
             {loading ? (
-              <>
-                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-              </>
+              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
             ) : (
               "Add"
             )}
@@ -116,16 +121,33 @@ export default function Centers() {
               key={c.id}
               className="flex justify-between items-center p-3 border rounded"
             >
-              <span className="font-medium">{capitalize(c.name)}</span>
+              <span className="font-medium">
+                {capitalize(c.name)}
+              </span>
 
-              <button
-                onClick={() => selectCenter(c)}
-                className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
-              >
-                Open
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => selectCenter(c)}
+                  className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
+                >
+                  Open
+                </button>
+
+                <button
+                  onClick={() => deleteCenter(c.id)}
+                  className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                >
+                  Delete
+                </button>
+              </div>
             </li>
           ))}
+
+          {centers.length === 0 && (
+            <p className="text-center text-gray-500">
+              No centers available
+            </p>
+          )}
         </ul>
       </div>
     </div>
