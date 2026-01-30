@@ -18,7 +18,16 @@ export default function Centers() {
   useEffect(() => {
     fetch(`${API_URL}/api/centers`)
       .then(res => res.json())
-      .then(data => setCenters(Array.isArray(data) ? data : []))
+      .then(data => {
+        const deletedIds =
+          JSON.parse(localStorage.getItem("deletedCenters")) || [];
+
+        const filtered = Array.isArray(data)
+          ? data.filter(c => !deletedIds.includes(c.id))
+          : [];
+
+        setCenters(filtered);
+      })
       .catch(() => setError("Failed to load centers"));
   }, [API_URL]);
 
@@ -56,9 +65,21 @@ export default function Centers() {
     }
   };
 
-  /* ================= UI DELETE ONLY ================= */
+  /* ================= UI DELETE (PERSIST) ================= */
   const deleteCenter = (id) => {
+    // UI remove
     setCenters(prev => prev.filter(c => c.id !== id));
+
+    // save deleted id to localStorage
+    const deleted =
+      JSON.parse(localStorage.getItem("deletedCenters")) || [];
+
+    if (!deleted.includes(id)) {
+      localStorage.setItem(
+        "deletedCenters",
+        JSON.stringify([...deleted, id])
+      );
+    }
   };
 
   /* ================= SELECT CENTER ================= */
