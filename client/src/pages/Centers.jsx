@@ -11,18 +11,23 @@ export default function Centers() {
   const API_URL =
     import.meta.env.VITE_API_URL || "http://localhost:5000";
 
+  /* ===== LOGGED IN USER ===== */
+  const user = JSON.parse(localStorage.getItem("user"));
+
+  // 🔐 user-wise delete storage
+  const deletedKey = `deletedCenters_user_${user?.id}`;
+
   const capitalize = (str = "") =>
     str.charAt(0).toUpperCase() + str.slice(1);
 
-  /* ===== GET LOGGED IN USER ===== */
-  const user =
-    JSON.parse(localStorage.getItem("user")) || {};
-
-  const deletedKey = `deletedCenters_user_${user.id}`;
-
   /* ================= FETCH CENTERS ================= */
   useEffect(() => {
-    fetch(`${API_URL}/api/centers`)
+    if (!user?.id) {
+      setError("User not logged in");
+      return;
+    }
+
+    fetch(`${API_URL}/api/centers/${user.id}`)
       .then(res => res.json())
       .then(data => {
         const deletedIds =
@@ -35,7 +40,7 @@ export default function Centers() {
         setCenters(filtered);
       })
       .catch(() => setError("Failed to load centers"));
-  }, [API_URL, deletedKey]);
+  }, [API_URL, user?.id, deletedKey]);
 
   /* ================= ADD CENTER ================= */
   const addCenter = async () => {
@@ -48,7 +53,7 @@ export default function Centers() {
     );
 
     if (exists) {
-      setError("Center name already exists");
+      setError("Center already exists");
       return;
     }
 
@@ -57,7 +62,10 @@ export default function Centers() {
       const res = await fetch(`${API_URL}/api/centers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: formattedName }),
+        body: JSON.stringify({
+          name: formattedName,
+          userId: user.id,
+        }),
       });
 
       const data = await res.json();
@@ -71,12 +79,12 @@ export default function Centers() {
     }
   };
 
-  /* ================= UI DELETE (USER-WISE) ================= */
+  /* ================= UI DELETE ONLY ================= */
   const deleteCenter = (id) => {
     // UI remove
     setCenters(prev => prev.filter(c => c.id !== id));
 
-    // Save deleted id for THIS USER ONLY
+    // remember delete for this user
     const deleted =
       JSON.parse(localStorage.getItem(deletedKey)) || [];
 
@@ -93,18 +101,19 @@ export default function Centers() {
     localStorage.setItem(
       "center",
       JSON.stringify({
-        id: Number(center.id),
+        id: center.id,
         name: center.name,
       })
     );
     navigate("/members");
   };
 
+  /* ================= UI ================= */
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center p-4">
+    <div className="min-h-screen bg-gray-100 flex justify-center p-4">
       <div className="w-full max-w-2xl bg-white shadow-lg rounded-lg p-4">
         <h2 className="text-2xl font-bold mb-4 text-center">
-          Centers
+          {user?.name || "My"} Centers
         </h2>
 
         {error && (
@@ -113,9 +122,10 @@ export default function Centers() {
           </div>
         )}
 
+        {/* ADD CENTER */}
         <div className="flex mb-6">
           <input
-            placeholder="New Center"
+            placeholder="New Center Name"
             value={name}
             onChange={(e) => {
               setName(e.target.value);
@@ -126,22 +136,17 @@ export default function Centers() {
           <button
             onClick={addCenter}
             disabled={loading}
-            className={`px-4 rounded-r-lg text-white
-              ${
-                loading
-                  ? "bg-indigo-400 cursor-not-allowed"
-                  : "bg-indigo-600 hover:bg-indigo-700"
-              }
-            `}
+            className={`px-4 rounded-r-lg text-white ${
+              loading
+                ? "bg-indigo-400 cursor-not-allowed"
+                : "bg-indigo-600 hover:bg-indigo-700"
+            }`}
           >
-            {loading ? (
-              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-            ) : (
-              "Add"
-            )}
+            {loading ? "Adding..." : "Add"}
           </button>
         </div>
 
+        {/* CENTER LIST */}
         <ul className="space-y-3">
           {centers.map(c => (
             <li
