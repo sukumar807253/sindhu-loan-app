@@ -14,13 +14,19 @@ export default function Centers() {
   const capitalize = (str = "") =>
     str.charAt(0).toUpperCase() + str.slice(1);
 
+  /* ===== GET LOGGED IN USER ===== */
+  const user =
+    JSON.parse(localStorage.getItem("user")) || {};
+
+  const deletedKey = `deletedCenters_user_${user.id}`;
+
   /* ================= FETCH CENTERS ================= */
   useEffect(() => {
     fetch(`${API_URL}/api/centers`)
       .then(res => res.json())
       .then(data => {
         const deletedIds =
-          JSON.parse(localStorage.getItem("deletedCenters")) || [];
+          JSON.parse(localStorage.getItem(deletedKey)) || [];
 
         const filtered = Array.isArray(data)
           ? data.filter(c => !deletedIds.includes(c.id))
@@ -29,7 +35,7 @@ export default function Centers() {
         setCenters(filtered);
       })
       .catch(() => setError("Failed to load centers"));
-  }, [API_URL]);
+  }, [API_URL, deletedKey]);
 
   /* ================= ADD CENTER ================= */
   const addCenter = async () => {
@@ -65,18 +71,18 @@ export default function Centers() {
     }
   };
 
-  /* ================= UI DELETE (PERSIST) ================= */
+  /* ================= UI DELETE (USER-WISE) ================= */
   const deleteCenter = (id) => {
     // UI remove
     setCenters(prev => prev.filter(c => c.id !== id));
 
-    // save deleted id to localStorage
+    // Save deleted id for THIS USER ONLY
     const deleted =
-      JSON.parse(localStorage.getItem("deletedCenters")) || [];
+      JSON.parse(localStorage.getItem(deletedKey)) || [];
 
     if (!deleted.includes(id)) {
       localStorage.setItem(
-        "deletedCenters",
+        deletedKey,
         JSON.stringify([...deleted, id])
       );
     }
