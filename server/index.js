@@ -161,22 +161,61 @@ app.post("/api/auth/login", async (req, res) => {
 });
 
 /* ==================== CENTERS ==================== */
+/* ==================== CENTERS ==================== */
+
+// ➕ ADD CENTER (user wise)
 app.post("/api/centers", async (req, res) => {
-  const { name } = req.body;
-  const { data, error } = await supabase
-    .from("centers")
-    .insert([{ name }])
-    .select()
-    .single();
+  try {
+    const { name, userId } = req.body;
 
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
+    if (!name || !userId) {
+      return res.status(400).json({ message: "Missing data" });
+    }
+
+    const { data, error } = await supabase
+      .from("centers")
+      .insert([
+        {
+          name,
+          user_id: userId,
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json(data);
+  } catch (err) {
+    console.error("ADD CENTER ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
-app.get("/api/centers", async (_, res) => {
-  const { data } = await supabase.from("centers").select("*");
-  res.json(data || []);
+// 📥 GET USER CENTERS
+app.get("/api/centers/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const { data, error } = await supabase
+      .from("centers")
+      .select("*")
+      .eq("user_id", userId)
+      .order("id", { ascending: false });
+
+    if (error) throw error;
+
+    res.json(data || []);
+  } catch (err) {
+    console.error("FETCH CENTERS ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
+
+// app.get("/api/centers", async (_, res) => {
+//   const { data } = await supabase.from("centers").select("*");
+//   res.json(data || []);
+// });
 
 /* ==================== MEMBERS ==================== */
 app.post("/api/members", async (req, res) => {
