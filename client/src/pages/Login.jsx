@@ -6,59 +6,61 @@ import { useNavigate } from "react-router-dom";
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false); // ✅ FIX
+  const [loading, setLoading] = useState(false);
+
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  // ✅ Safe API base
+  const API_URL =
+    import.meta.env.VITE_API_URL?.trim() || "http://localhost:5000";
 
   const submit = async (e) => {
     e.preventDefault();
-    setLoading(true); // ✅ start loading
+    if (loading) return;
 
+    setLoading(true);
     try {
       const res = await axios.post(`${API_URL}/api/auth/login`, {
-        email: email.toLowerCase(),
+        email: email.toLowerCase().trim(),
         password,
       });
 
-      const user = res.data.user;
+      const user = res.data?.user;
+      if (!user) throw new Error("Invalid response");
 
       login(user);
-
-      if (user.isAdmin) {
-        navigate("/admin/users");
-      } else {
-        navigate("/centers");
-      }
+      navigate(user.isAdmin ? "/admin/users" : "/centers");
     } catch (err) {
-      alert(err.response?.data?.message || "Login failed");
       console.error(err);
+      alert(err?.response?.data?.message || "❌ Login failed");
     } finally {
-      setLoading(false); // ✅ stop loading
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-indigo-200 via-purple-200 to-pink-200">
-      <div className="bg-white p-10 rounded-xl shadow-xl w-full max-w-md">
-        <h2 className="text-3xl font-bold text-center text-indigo-500">
-          Welcome Back <span className="text-green-400">Sindhuja.Fin</span>
-        </h2>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-300 via-purple-300 to-pink-300 px-4">
+      <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md">
+        
+        {/* Header */}
+        <h1 className="text-3xl font-extrabold text-center text-indigo-600">
+          Sindhuja<span className="text-green-500">.Fin</span>
+        </h1>
+        <p className="text-center text-gray-500 mb-6">
+          Secure Loan Management System
+        </p>
 
-        <h2 className="text-3xl font-bold text-center mb-6 text-indigo-700">
-          Login
-        </h2>
-
+        {/* Form */}
         <form onSubmit={submit} className="space-y-4">
           <input
             type="email"
-            placeholder="Email"
+            placeholder="Email address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            required
             disabled={loading}
-            className="w-full px-4 py-2 rounded-md border-2 border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+            required
+            className="w-full px-4 py-2 rounded-lg border border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
 
           <input
@@ -66,43 +68,24 @@ export default function Login() {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            required
             disabled={loading}
-            className="w-full px-4 py-2 rounded-md border-2 border-green-400 focus:outline-none focus:ring-2 focus:ring-green-400"
+            required
+            className="w-full px-4 py-2 rounded-lg border border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500"
           />
 
           <button
             type="submit"
             disabled={loading}
-            className={`w-full flex items-center justify-center gap-2 py-2 rounded-md font-semibold transition
+            className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg font-semibold transition-all
               ${
                 loading
                   ? "bg-indigo-400 cursor-not-allowed"
-                  : "bg-indigo-600 hover:bg-indigo-700 text-white"
+                  : "bg-indigo-600 hover:bg-indigo-700 text-white hover:shadow-lg"
               }`}
           >
             {loading ? (
               <>
-                <svg
-                  className="w-5 h-5 animate-spin"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                  />
-                </svg>
+                <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                 Logging in...
               </>
             ) : (
@@ -111,11 +94,13 @@ export default function Login() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-gray-600">
+        {/* Footer */}
+        <p className="mt-6 text-center text-sm text-gray-600">
           Don’t have an account?{" "}
           <button
             onClick={() => navigate("/signup")}
             className="text-indigo-600 hover:text-indigo-800 font-semibold underline"
+            disabled={loading}
           >
             Sign up
           </button>
