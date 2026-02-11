@@ -2,36 +2,46 @@ import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
 export default function Signup() {
   const navigate = useNavigate();
 
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
+
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(""); // ✅ success message
+  const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
 
   const submit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
     setSuccess("");
 
+    if (!form.name || !form.email || !form.password) {
+      return setError("All fields are required");
+    }
+
+    setLoading(true);
+
     try {
-      const res = await axios.post(`${API_URL}/api/auth/signup`, {
-        name: e.target.name.value,
-        email: e.target.email.value.toLowerCase(),
-        password: e.target.password.value,
+      await axios.post(`${API_URL}/api/auth/signup`, {
+        name: form.name.trim(),
+        email: form.email.toLowerCase(),
+        password: form.password,
       });
 
-      if (res.status === 200 || res.status === 201) {
-        setSuccess("Signup successful! Redirecting to login...");
+      setSuccess("Signup successful! Redirecting to login...");
 
-        // ✅ Auto redirect after popup
-        setTimeout(() => {
-          navigate("/");
-        }, 1500);
-      }
+      setTimeout(() => navigate("/"), 1500);
     } catch (err) {
       setError(err.response?.data?.message || "Signup failed");
     } finally {
@@ -43,17 +53,15 @@ export default function Signup() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-indigo-200 via-purple-200 to-pink-200">
       <div className="bg-white p-10 rounded-xl shadow-xl w-full max-w-md">
         <h2 className="text-3xl font-bold text-center mb-6 text-indigo-700">
-          Signup
+          Create Account
         </h2>
 
-        {/* ✅ SUCCESS MESSAGE */}
         {success && (
           <div className="mb-4 text-green-700 bg-green-100 border border-green-300 px-4 py-2 rounded-md text-center">
             {success}
           </div>
         )}
 
-        {/* ❌ ERROR MESSAGE */}
         {error && (
           <div className="mb-4 text-red-700 bg-red-100 border border-red-300 px-4 py-2 rounded-md text-center">
             {error}
@@ -64,27 +72,33 @@ export default function Signup() {
           <input
             name="name"
             placeholder="Name"
-            required
+            value={form.name}
+            onChange={handleChange}
             disabled={loading}
-            className="w-full px-4 py-2 rounded-md border-2 border-purple-400"
+            required
+            className="w-full px-4 py-2 rounded-md border-2 border-purple-400 focus:ring-2 focus:ring-purple-400 outline-none"
           />
 
           <input
             name="email"
             type="email"
             placeholder="Email"
-            required
+            value={form.email}
+            onChange={handleChange}
             disabled={loading}
-            className="w-full px-4 py-2 rounded-md border-2 border-yellow-400"
+            required
+            className="w-full px-4 py-2 rounded-md border-2 border-yellow-400 focus:ring-2 focus:ring-yellow-400 outline-none"
           />
 
           <input
             name="password"
             type="password"
             placeholder="Password"
-            required
+            value={form.password}
+            onChange={handleChange}
             disabled={loading}
-            className="w-full px-4 py-2 rounded-md border-2 border-green-400"
+            required
+            className="w-full px-4 py-2 rounded-md border-2 border-green-400 focus:ring-2 focus:ring-green-400 outline-none"
           />
 
           <button
