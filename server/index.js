@@ -6,7 +6,10 @@ const multer = require("multer");
 const path = require("path");
 const { createClient } = require("@supabase/supabase-js");
 const processImage = require("./utils/imageProcessor");
-
+const jwt = require("jsonwebtoken");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+const { verifyToken } = require("./middleware/auth");
 
 const app = express();
 
@@ -24,6 +27,7 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !SUPABASE_BUCKET) {
 }
 
 /* ==================== MIDDLEWARE ==================== */
+app.use(helmet());
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -117,7 +121,13 @@ app.post("/api/auth/signup", async (req, res) => {
 });
 
 
-app.post("/api/auth/login", async (req, res) => {
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 50,
+  message: { message: "Too many login attempts, please try again later." },
+});
+
+app.post("/api/auth/login", loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -145,8 +155,15 @@ app.post("/api/auth/login", async (req, res) => {
     }
 
     // ✅ RETURN isAdmin → frontend decides redirect
+    const token = jwt.sign(
+      { id: user.id, isAdmin: user.isAdmin },
+      process.env.JWT_SECRET || "fallback_secret_key",
+      { expiresIn: "24h" }
+    );
+
     res.json({
       success: true,
+      token,
       user: {
         id: user.id,
         name: user.name,
@@ -161,7 +178,7 @@ app.post("/api/auth/login", async (req, res) => {
 });
 
 /* ==================== CENTERS ==================== */
-app.post("/api/centers", async (req, res) => {
+app.post("/api/centers", verifyToken, async (req, res) => {
   const { name } = req.body;
   const { data, error } = await supabase
     .from("centers")
@@ -173,13 +190,13 @@ app.post("/api/centers", async (req, res) => {
   res.json(data);
 });
 
-app.get("/api/centers", async (_, res) => {
+app.get("/api/centers", verifyToken, async (_, res) => {
   const { data } = await supabase.from("centers").select("*");
   res.json(data || []);
 });
 
 /* ==================== MEMBERS ==================== */
-app.post("/api/members", async (req, res) => {
+app.post("/api/members", verifyToken, async (req, res) => {
   const { name, centerId } = req.body;
 
   const { data, error } = await supabase
@@ -192,7 +209,7 @@ app.post("/api/members", async (req, res) => {
   res.json(data);
 });
 
-app.get("/api/members/:centerId", async (req, res) => {
+app.get("/api/members/:centerId", verifyToken, async (req, res) => {
   const { data } = await supabase
     .from("members")
     .select("*")
@@ -204,6 +221,7 @@ app.get("/api/members/:centerId", async (req, res) => {
 /* ==================== LOANS ==================== */
 app.post(
   "/api/loans",
+  verifyToken,
   upload.fields(FILE_FIELDS.map((f) => ({ name: f, maxCount: 1 }))),
   async (req, res) => {
     try {
@@ -278,7 +296,7 @@ app.post(
   }
 );
 
-app.get("/api/loans", async (_, res) => {
+app.get("/api/loans", verifyToken, async (_, res) => {
   const { data } = await supabase
     .from("loans")
     .select("*")
@@ -287,7 +305,7 @@ app.get("/api/loans", async (_, res) => {
   res.json(data || []);
 });
 
-app.get("/api/users/:userId/loans", async (req, res) => {
+app.get("/api/users/:userId/loans", verifyToken, async (req, res) => {
   const { data } = await supabase
     .from("loans")
     .select("*")
@@ -296,7 +314,7 @@ app.get("/api/users/:userId/loans", async (req, res) => {
   res.json(data || []);
 });
 
-app.patch("/api/loans/:id", async (req, res) => {
+app.patch("/api/loans/:id", verifyToken, async (req, res) => {
   const { status } = req.body;
 
   const { error } = await supabase
@@ -308,7 +326,7 @@ app.patch("/api/loans/:id", async (req, res) => {
   res.json({ success: true });
 });
 
-app.delete("/api/loans/:id", async (req, res) => {
+app.delete("/api/loans/:id", verifyToken, async (req, res) => {
   const { error } = await supabase
     .from("loans")
     .delete()
@@ -319,12 +337,12 @@ app.delete("/api/loans/:id", async (req, res) => {
 });
 
 /* ==================== USERS ==================== */
-app.get("/api/users", async (_, res) => {
+app.get("/api/users", verifyToken, async (_, res) => {
   const { data } = await supabase.from("users").select("*");
   res.json(data || []);
 });
 
-app.patch("/api/users/:id", async (req, res) => {
+app.patch("/api/users/:id", verifyToken, async (req, res) => {
   const { blocked } = req.body;
 
   const { error } = await supabase
@@ -336,7 +354,7 @@ app.patch("/api/users/:id", async (req, res) => {
   res.json({ success: true });
 });
 /* ==================== GET SINGLE LOAN ==================== */
-app.get("/api/loans/:id", async (req, res) => {
+app.get("/api/loans/:id", verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -358,7 +376,7 @@ app.get("/api/loans/:id", async (req, res) => {
 });
 
 /* ==================== CREDIT LOAN ==================== */
-app.post("/api/loans/credit/:id", async (req, res) => {
+app.post("/api/loans/credit/:id", verifyToken, async (req, res) => {
   const loanId = req.params.id;
 
   try {

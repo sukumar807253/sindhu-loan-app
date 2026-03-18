@@ -13,7 +13,7 @@ export default function Login() {
 
   // ✅ Safe API base
   const API_URL =
-    import.meta.env.VITE_API_URL?.trim() || "http://localhost:5000";
+    import.meta.env.VITE_API_URL?.trim() || "http://127.0.0.1:5000";
 
   const submit = async (e) => {
     e.preventDefault();
@@ -27,9 +27,10 @@ export default function Login() {
       });
 
       const user = res.data?.user;
-      if (!user) throw new Error("Invalid response");
+      const token = res.data?.token;
+      if (!user || !token) throw new Error("Invalid response");
 
-      login(user);
+      login(user, token);
       navigate(user.isAdmin ? "/admin/users" : "/centers");
     } catch (err) {
       console.error(err);
@@ -42,7 +43,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-300 via-purple-300 to-pink-300 px-4">
       <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md">
-        
+
         {/* Header */}
         <h1 className="text-3xl font-extrabold text-center text-indigo-600">
           Sindhuja<span className="text-green-500">.Fin</span>
@@ -77,10 +78,9 @@ export default function Login() {
             type="submit"
             disabled={loading}
             className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg font-semibold transition-all
-              ${
-                loading
-                  ? "bg-indigo-400 cursor-not-allowed"
-                  : "bg-indigo-600 hover:bg-indigo-700 text-white hover:shadow-lg"
+              ${loading
+                ? "bg-indigo-400 cursor-not-allowed"
+                : "bg-indigo-600 hover:bg-indigo-700 text-white hover:shadow-lg"
               }`}
           >
             {loading ? (

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 export default function Members() {
   const navigate = useNavigate();
@@ -12,7 +13,7 @@ export default function Members() {
   const [addLoading, setAddLoading] = useState(false); // ✅ Add button loading
   const [error, setError] = useState("");
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
 
   // Redirect if no center selected
   useEffect(() => {
@@ -25,11 +26,11 @@ export default function Members() {
 
     const fetchData = async () => {
       try {
-        const membersRes = await fetch(`${API_URL}/api/members/${center.id}`);
-        const loansRes = await fetch(`${API_URL}/api/loans`);
+        const membersRes = await axios.get(`${API_URL}/api/members/${center.id}`);
+        const loansRes = await axios.get(`${API_URL}/api/loans`);
 
-        const membersData = await membersRes.json();
-        const loansData = await loansRes.json();
+        const membersData = membersRes.data;
+        const loansData = loansRes.data;
 
         setMembers(
           membersData.map((m) => {
@@ -44,8 +45,12 @@ export default function Members() {
             };
           })
         );
-      } catch {
-        setError("Failed to load members");
+      } catch (err) {
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          navigate("/"); // redirect on unauth
+        } else {
+          setError("Failed to load members");
+        }
       } finally {
         setLoading(false);
       }
@@ -80,17 +85,12 @@ export default function Members() {
     try {
       const formattedName = capitalizeName(name);
 
-      const res = await fetch(`${API_URL}/api/members`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formattedName,
-          centerId: Number(center.id),
-        }),
+      const res = await axios.post(`${API_URL}/api/members`, {
+        name: formattedName,
+        centerId: Number(center.id),
       });
 
-      if (!res.ok) throw new Error("Failed to add member");
-      const data = await res.json();
+      const data = res.data;
 
       setMembers((prev) => [
         ...prev,
@@ -174,14 +174,14 @@ export default function Members() {
                 disabled={!!member.loanStatus}
                 onClick={() => handleAction(member)}
                 className={`px-3 py-1 rounded text-white ${!member.loanStatus
-                    ? "bg-blue-600 hover:bg-blue-700"
-                    : member.loanStatus === "PENDING"
-                      ? "bg-yellow-500 cursor-not-allowed"
-                      : member.loanStatus === "APPROVED"
-                        ? "bg-green-700 cursor-not-allowed"
-                        : member.loanStatus === "CREDITED"
-                          ? "bg-purple-700 cursor-not-allowed"
-                          : "bg-red-600 cursor-not-allowed"
+                  ? "bg-blue-600 hover:bg-blue-700"
+                  : member.loanStatus === "PENDING"
+                    ? "bg-yellow-500 cursor-not-allowed"
+                    : member.loanStatus === "APPROVED"
+                      ? "bg-green-700 cursor-not-allowed"
+                      : member.loanStatus === "CREDITED"
+                        ? "bg-purple-700 cursor-not-allowed"
+                        : "bg-red-600 cursor-not-allowed"
                   }`}
 
               >

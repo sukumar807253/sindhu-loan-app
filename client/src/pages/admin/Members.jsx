@@ -8,7 +8,7 @@ export default function Members() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get(`http://localhost:5000/api/members/${center.id}`)
+    axios.get(`http://127.0.0.1:5000/api/members/${center.id}`)
       .then(res => setMembers(res.data));
   }, []);
 

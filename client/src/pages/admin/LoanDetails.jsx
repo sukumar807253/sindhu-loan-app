@@ -12,7 +12,7 @@ export default function AdminLoanDetails() {
   const [updating, setUpdating] = useState(false);
   const [credited, setCredited] = useState(false); // track if loan has been credited
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
   const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
   const SUPABASE_BUCKET = import.meta.env.VITE_SUPABASE_BUCKET;
 

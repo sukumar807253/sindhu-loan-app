@@ -7,7 +7,7 @@ export default function Centers() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get("http://localhost:5000/api/centers")
+    axios.get("http://127.0.0.1:5000/api/centers")
       .then(res => setCenters(res.data));
   }, []);
 
